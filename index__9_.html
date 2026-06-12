@@ -1520,8 +1520,6 @@ async function openConvo(otherUid){
       </div>
 
       <!-- Messages -->
-      <div id="chat-debug" style="text-align:center;font-size:.7rem;color:var(--text3);padding:4px">cid: ${esc(cid)} | maj: 0</div>
-      <div id="chat-conn" style="text-align:center;font-size:.65rem;color:var(--text3);padding:2px">conn: ...</div>
       <div id="chat-msgs" style="flex:1;overflow-y:auto;padding:14px 16px 10px;display:flex;flex-direction:column;gap:8px;min-height:0">
         <div style="text-align:center;color:var(--text3);font-size:.82rem">Chargement...</div>
       </div>
@@ -1544,32 +1542,15 @@ async function openConvo(otherUid){
   if(currentChatRef){ off(currentChatRef); currentChatRef=null; currentChatCid=null; }
 
   // Charger et écouter les messages en temps réel
-  const chatRef=ref(db,`spk3/messages/${cid}`);
+  const chatRef=ref(db,`spk3/msgs/${cid}`);
   currentChatRef=chatRef;
   currentChatCid=cid;
-  // Test diagnostic sur un chemin neuf
-  (async()=>{
-    const testRef=ref(db,`spk3/_test/${cid}/${Date.now()}`);
-    await set(testRef, {hello:'world',myId});
-    const allTest=await get(ref(db,`spk3/_test/${cid}`));
-    const c=$('chat-conn');
-    if(c) c.textContent='_test count: '+(allTest.exists()?Object.keys(allTest.val()).length:0);
-  })();
-  onValue(ref(db,'.info/connected'), s=>{
-    const c=$('chat-conn');
-    if(c) c.textContent='conn: '+s.val();
-  });
-  let updateCount=0;
-  let chatPollTimer=null;
-  const renderMsgs=snap=>{
+  onValue(chatRef, snap=>{
     if(currentChatCid!==cid) return;
-    updateCount++;
-    const dbg=$('chat-debug');
     const box=$('chat-msgs');
     if(!box) return;
     const msgs=[];
     if(snap.exists()) snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
-    if(dbg) dbg.textContent=`cid:${JSON.stringify(cid)}|len:${cid.length}|myId:${myId}|maj:${updateCount}|n:${msgs.length}|`+msgs.map(m=>`[${m.id}:${m.from}:${m.text}]`).join(' ');
     if(!msgs.length){ box.innerHTML='<div style="text-align:center;color:var(--text3);font-size:.82rem">Dis bonjour 👋</div>'; return; }
     box.innerHTML=msgs.map(m=>{
       const mine=m.from===myId;
@@ -1578,17 +1559,7 @@ async function openConvo(otherUid){
       </div>`;
     }).join('');
     box.scrollTop=box.scrollHeight;
-  };
-  // Live listener
-  onValue(chatRef, renderMsgs);
-  // Polling de secours (toutes les 2s) pour garantir la réception
-  chatPollTimer=setInterval(async()=>{
-    if(currentChatCid!==cid){ clearInterval(chatPollTimer); return; }
-    try{
-      const s=await get(chatRef);
-      renderMsgs(s);
-    }catch(e){}
-  }, 2000);
+  });
 
   // Envoyer
   const sendMsg=async()=>{
@@ -1598,17 +1569,11 @@ async function openConvo(otherUid){
     inp.value='';
     const msg={from:myId,text,at:Date.now()};
     try{
-      const sendCid=convoId(myId,otherUid);
-      const sorted=[myId,otherUid].sort();
-      const msgRef=push(ref(db,`spk3/messages/${sendCid}`));
+      const msgRef=push(ref(db,`spk3/msgs/${cid}`));
       await set(msgRef,msg);
       await set(ref(db,`spk3/convos/${myId}/${otherUid}`),{uid:otherUid,avatar:otherData.avatar||DEFAV,lastMsg:text,lastAt:Date.now()});
       await set(ref(db,`spk3/convos/${otherUid}/${myId}`),{uid:myId,avatar:myData.avatar||DEFAV,lastMsg:text,lastAt:Date.now()});
-      const dbg=$('chat-debug');
-      if(dbg) dbg.textContent='ENVOYE key='+msgRef.key+' cid='+sendCid+' myId='+myId+' otherUid='+otherUid;
     }catch(err){
-      const dbg=$('chat-debug');
-      if(dbg) dbg.textContent='ERREUR ENVOI: '+(err?.message||err);
       inp.value=text;
     }
   };
