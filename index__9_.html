@@ -1547,6 +1547,14 @@ async function openConvo(otherUid){
   const chatRef=ref(db,`spk3/messages/${cid}`);
   currentChatRef=chatRef;
   currentChatCid=cid;
+  // Test diagnostic sur un chemin neuf
+  (async()=>{
+    const testRef=ref(db,`spk3/_test/${cid}/${Date.now()}`);
+    await set(testRef, {hello:'world',myId});
+    const allTest=await get(ref(db,`spk3/_test/${cid}`));
+    const c=$('chat-conn');
+    if(c) c.textContent='_test count: '+(allTest.exists()?Object.keys(allTest.val()).length:0);
+  })();
   onValue(ref(db,'.info/connected'), s=>{
     const c=$('chat-conn');
     if(c) c.textContent='conn: '+s.val();
