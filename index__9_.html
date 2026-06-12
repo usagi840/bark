@@ -1556,7 +1556,7 @@ async function openConvo(otherUid){
     if(!box) return;
     const msgs=[];
     if(snap.exists()) snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
-    if(dbg) dbg.textContent=`cid:${cid}|myId:${myId}|maj:${updateCount}|n:${msgs.length}|`+msgs.map(m=>`[${m.from}:${m.text}]`).join(' ');
+    if(dbg) dbg.textContent=`cid:${cid}|myId:${myId}|maj:${updateCount}|n:${msgs.length}|`+msgs.map(m=>`[${m.id}:${m.from}:${m.text}]`).join(' ');
     if(!msgs.length){ box.innerHTML='<div style="text-align:center;color:var(--text3);font-size:.82rem">Dis bonjour 👋</div>'; return; }
     box.innerHTML=msgs.map(m=>{
       const mine=m.from===myId;
@@ -1582,7 +1582,7 @@ async function openConvo(otherUid){
       await set(ref(db,`spk3/convos/${myId}/${otherUid}`),{uid:otherUid,avatar:otherData.avatar||DEFAV,lastMsg:text,lastAt:Date.now()});
       await set(ref(db,`spk3/convos/${otherUid}/${myId}`),{uid:myId,avatar:myData.avatar||DEFAV,lastMsg:text,lastAt:Date.now()});
       const dbg=$('chat-debug');
-      if(dbg) dbg.textContent='ENVOYE vers cid='+sendCid+' sorted=['+sorted.join(',')+'] myId='+myId+' otherUid='+otherUid;
+      if(dbg) dbg.textContent='ENVOYE key='+msgRef.key+' cid='+sendCid+' myId='+myId+' otherUid='+otherUid;
     }catch(err){
       const dbg=$('chat-debug');
       if(dbg) dbg.textContent='ERREUR ENVOI: '+(err?.message||err);
